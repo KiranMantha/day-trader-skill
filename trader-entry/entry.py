@@ -2,11 +2,11 @@
 """Entry Timer for trader-entry: watches a setup bar by bar and says the
 moment to get in. Standard library only. Long side only. It never places an order.
 
-    python3 entry.py check TSLA                          # opening-range breakout, 5-minute bars
-    python3 entry.py check TSLA --now "2026-10-19 10:15" --offline TSLA.json
-    python3 entry.py check TSLA --setup level --level 371.20    # first close above a price
-    python3 entry.py check TSLA --interval 1m --min-volume-x 1.5 --write
-    python3 entry.py watch TSLA --every 30 --until 15:30  # one line per closed bar
+    python3 entry.py check RELIANCE                      # opening-range breakout, 5-minute bars
+    python3 entry.py check RELIANCE --now "2026-11-12 10:15" --offline RELIANCE.NS.json
+    python3 entry.py check RELIANCE --setup level --level 1345.00    # first close above a price
+    python3 entry.py check RELIANCE --interval 1m --min-volume-x 1.5 --write
+    python3 entry.py watch RELIANCE --every 30 --until 15:00 # one line per closed bar
     python3 entry.py watchlist                            # every hit in trader/watchlist.json
 
 Setups (v2 plans longs only):
@@ -40,7 +40,7 @@ on expiry, at the close or at --until (exit 1). With --now or --offline it runs
 on a simulated clock and replays the day without sleeping.
 
 Data: Yahoo's free chart JSON (unofficial, can lag, bars not single trades)
-  https://query2.finance.yahoo.com/v8/finance/chart/TSLA?range=1d&interval=5m
+  https://query2.finance.yahoo.com/v8/finance/chart/RELIANCE.NS?range=1d&interval=5m
   falls back to query1 on HTTP 429 or 5xx; a 429 gets one retry after a pause.
   --offline PATH reads a saved chart JSON (.json or .json.gz) instead, or
   PATH/<TICKER>.json when PATH is a folder. Without --now, an offline file is

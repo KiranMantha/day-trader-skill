@@ -50,7 +50,7 @@ requests (--pause). Partial results are reported as partial.
 --offline PATH reads files instead of the network: universe wants a folder
 with EQUITY_L.csv and margins-equity.json; daily and orb take a folder of
 <T>.json v8 chart files or spark responses, or one file that is a spark
-response, a v8 chart, or a bundle {"TSLA": <v8 json>, ...}. .json.gz is fine.
+response, a v8 chart, or a bundle {"RELIANCE": <v8 json>, ...}. .json.gz is fine.
 
 A scan is a list of charts that match a rule, not a list of stocks to buy.
 Exit code 0 when the scan found something, 1 when it did not or could not run.
@@ -266,7 +266,7 @@ def series_from_result(res):
 
 def parse_spark(text_or_doc, wanted=None):
     """Spark JSON -> {SYM: series}. Symbols Yahoo does not know are simply missing
-    from the answer. `wanted` maps Yahoo symbols back to ours (BRK-B -> BRK.B)."""
+    from the answer. `wanted` maps Yahoo symbols back to ours (RELIANCE.NS -> RELIANCE)."""
     doc = json.loads(text_or_doc) if isinstance(text_or_doc, str) else text_or_doc
     sp = (doc or {}).get("spark") if isinstance(doc, dict) else None
     if not isinstance(sp, dict):
@@ -278,7 +278,7 @@ def parse_spark(text_or_doc, wanted=None):
         if not resp:
             continue
         ysym = item.get("symbol") or (resp[0].get("meta") or {}).get("symbol") or ""
-        sym = (wanted or {}).get(ysym.upper(), ysym.upper().replace("-", "."))
+        sym = (wanted or {}).get(ysym.upper(), ysym.upper()[:-3] if ysym.upper().endswith(".NS") else ysym.upper())
         out[sym] = series_from_result(resp[0])
     if err and not out:
         raise ScanError("Yahoo spark: %s" % (err.get("description") or err.get("code") or err))
@@ -513,7 +513,7 @@ def scan_daily(data, symbols, now_utc, min_price, min_volume):
             hits.append({"symbol": sym, "setups": tags, "price": round(closes[-1], 2),
                          "close_date": d_last.isoformat(), "rsi": round(nums["rsi"], 1),
                          "volume": int(vol) if vol is not None else None})
-    hits.sort(key=lambda h: (-(h["price"] * (h["volume"] or 0)), h["symbol"]))  # most dollars traded first
+    hits.sort(key=lambda h: (-(h["price"] * (h["volume"] or 0)), h["symbol"]))  # most rupees traded first
     last_date = max(dates, key=lambda d: (dates[d], d)) if dates else None
     counts["hits"] = len(hits)
     return hits, counts, last_date
@@ -540,7 +540,7 @@ def session_bars(series, day, cutoff):
         if et.date() != day or et.second or et.minute % BAR_MIN:
             continue  # another day, or the live tick off the grid
         if et.time() < OPEN or et.time() >= close_t:
-            continue  # pre-market, after hours, the 4:00 PM closing print
+            continue  # pre-market, after hours, the 15:30 closing print
         if et + datetime.timedelta(minutes=BAR_MIN) > cutoff:
             continue  # still in progress at the cutoff
         v = series.get("v")

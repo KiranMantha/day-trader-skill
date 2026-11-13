@@ -1,0 +1,152 @@
+{
+ "as_on_date": "12-Nov-2026",
+ "BULK_DEALS_DATA": [
+  {
+   "buySell": "BUY",
+   "clientName": "VAIBHAV RAJENDRA DOSHI",
+   "date": "12-Nov-2026",
+   "name": "AAA Technologies Limited",
+   "qty": "85343",
+   "remarks": "-",
+   "symbol": "AAATECH",
+   "watp": "90.56"
+  },
+  {
+   "buySell": "BUY",
+   "clientName": "QE SECURITIES LLP",
+   "date": "12-Nov-2026",
+   "name": "Adroit Industries (I) Ltd",
+   "qty": "253995",
+   "remarks": "-",
+   "symbol": "ADROITIND",
+   "watp": "196.78"
+  },
+  {
+   "buySell": "BUY",
+   "clientName": "ALPHAGREP SECURITIES PRIVATE LIMITED",
+   "date": "12-Nov-2026",
+   "name": "Adroit Industries (I) Ltd",
+   "qty": "275923",
+   "remarks": "-",
+   "symbol": "ADROITIND",
+   "watp": "196.91"
+  },
+  {
+   "buySell": "BUY",
+   "clientName": "K HEMANTHKUMAR",
+   "date": "12-Nov-2026",
+   "name": "Antarctica Graphics Ltd",
+   "qty": "888766",
+   "remarks": "-",
+   "symbol": "ANTGRAPHIC",
+   "watp": "0.7"
+  },
+  {
+   "buySell": "BUY",
+   "clientName": "BULLPULSE MARKETEDGE PRIVATE LIMITED",
+   "date": "12-Nov-2026",
+   "name": "A-One Steels India Ltd",
+   "qty": "458343",
+   "remarks": "-",
+   "symbol": "AONESTEELS",
+   "watp": "433.69"
+  },
+  {
+   "buySell": "BUY",
+   "clientName": "ACME CAPITAL MARKET LIMITED",
+   "date": "12-Nov-2026",
+   "name": "A-One Steels India Ltd",
+   "qty": "703494",
+   "remarks": "-",
+   "symbol": "AONESTEELS",
+   "watp": "434.51"
+  }
+ ],
+ "BULK_DEALS": "134",
+ "SHORT_DEALS": "105",
+ "BLOCK_DEALS": "2",
+ "SHORT_DEALS_DATA": [
+  {
+   "buySell": null,
+   "clientName": null,
+   "date": "12-Nov-2026",
+   "name": "ADITYA BIRLA CAPITAL LIMITED",
+   "qty": "412",
+   "remarks": null,
+   "symbol": "ABCAPITAL",
+   "watp": null
+  },
+  {
+   "buySell": null,
+   "clientName": null,
+   "date": "12-Nov-2026",
+   "name": "ADITYA BIRLA REAL EST LTD",
+   "qty": "8",
+   "remarks": null,
+   "symbol": "ABREL",
+   "watp": null
+  },
+  {
+   "buySell": null,
+   "clientName": null,
+   "date": "12-Nov-2026",
+   "name": "ADANI ENERGY SOLUTION LTD",
+   "qty": "1",
+   "remarks": null,
+   "symbol": "ADANIENSOL",
+   "watp": null
+  },
+  {
+   "buySell": null,
+   "clientName": null,
+   "date": "12-Nov-2026",
+   "name": "ADANI POWER LTD",
+   "qty": "3149",
+   "remarks": null,
+   "symbol": "ADANIPOWER",
+   "watp": null
+  },
+  {
+   "buySell": null,
+   "clientName": null,
+   "date": "12-Nov-2026",
+   "name": "AEROFLEX INDUSTRIES LTD",
+   "qty": "100",
+   "remarks": null,
+   "symbol": "AEROFLEX",
+   "watp": null
+  },
+  {
+   "buySell": null,
+   "clientName": null,
+   "date": "12-Nov-2026",
+   "name": "ANANT RAJ LIMITED",
+   "qty": "7450",
+   "remarks": null,
+   "symbol": "ANANTRAJ",
+   "watp": null
+  }
+ ],
+ "BLOCK_DEALS_DATA": [
+  {
+   "buySell": "BUY",
+   "clientName": "SANTOSH KUMAR AGRAWAL",
+   "date": "12-Nov-2026",
+   "name": "Gallantt Ispat Limited",
+   "qty": "4000000",
+   "remarks": null,
+   "symbol": "GALLANTT",
+   "watp": "503"
+  },
+  {
+   "buySell": "SELL",
+   "clientName": "DINESH R AGARWAL",
+   "date": "12-Nov-2026",
+   "name": "Gallantt Ispat Limited",
+   "qty": "4000000",
+   "remarks": null,
+   "symbol": "GALLANTT",
+   "watp": "503"
+  }
+ ]
+}

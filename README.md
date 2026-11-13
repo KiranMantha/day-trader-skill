@@ -1,6 +1,6 @@
 # The Day Trader skill, India edition
 
-11 Claude skills for day trading on the NSE with Zerodha: scan the charts, track announcements and deals, time every entry and exit, size to Zerodha's own intraday margin and charges, and replay every outcome before you risk a rupee.
+11 Claude skills for day trading on the NSE with Zerodha: scan the charts, track announcements and deals, time every entry and exit, size to Zerodha's MIS margin and charges, and replay every outcome before you risk a rupee.
 
 This is an India port of the US day-trader-skill pack (Jake Schincariol, MIT).
 Free, no signup, no API key. The tools are plain Python that read free public

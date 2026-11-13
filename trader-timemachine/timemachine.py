@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Time Machine for trader-timemachine. Standard library only.
 
-Replays a planned day trade before you risk a dollar: 10,000 simulated runs of
+Replays a planned day trade before you risk a rupee: 10,000 simulated runs of
 the rest of the session from your entry, plus the same rule on every past
 session in the data.
 
@@ -59,7 +59,7 @@ prediction: earnings, news and halts can do what the last 60 days never did.
 Data: https://query2.finance.yahoo.com/v8/finance/chart/<T>?range=60d&interval=5m
 (unofficial and free, can lag; falls back to query1 on 429 or 5xx).
 --offline FILE reads a saved chart JSON (.json or .json.gz) instead.
-Times are IST (ET) wall-clock; --now "2026-10-19 10:15" pins the clock.
+Times are IST wall-clock; --now "2026-11-13 10:15" pins the clock.
 """
 
 import argparse

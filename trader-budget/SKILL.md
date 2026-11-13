@@ -63,7 +63,9 @@ qty = floor of the smallest of
   no order. The list is read live; `--margins FILE` uses a saved copy.
 - **A long option** needs the full premium. **A future** needs `--margin-per-lot`, the figure Kite shows in
   its order window: SPAN margins change daily and this tool does not guess them.
-- **Lots.** F&O quantities are whole lots (`--lot-size`; Kite's order window shows it).
+- **Lots.** F&O quantities are whole lots (`--lot-size`; Kite's order window shows it). One Nifty lot is
+  worth lakhs, so raise `max_order_inr` (and `max_position_pct`) in your config before sizing F&O, or the
+  sizer will say one lot is over your max order.
 - **Tick.** Prices are rounded to the tick (0.05) because Kite rejects any other.
 - **Charges** use Zerodha's published schedule (zerodha.com/charges): brokerage min(Rs 20, 0.03%) a leg on
   equity and futures, flat Rs 20 on options, STT on the sell side (0.025% equity intraday), exchange fee,

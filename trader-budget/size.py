@@ -70,6 +70,7 @@ DEFAULTS = {
     "product": "MIS",
     "tick": 0.05,
     "blocked": [],
+    "allow_fno": True,
     "allow_short": False,
 }
 EPS = 1e-9

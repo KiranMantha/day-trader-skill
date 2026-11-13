@@ -1,0 +1,65 @@
+[
+ {
+  "margin": 0,
+  "co_lower": 20.0,
+  "mis_multiplier": 5.0,
+  "tradingsymbol": "BAJAJ-AUTO",
+  "co_upper": 5.0,
+  "nrml_margin": 0,
+  "mis_margin": 20.0
+ },
+ {
+  "margin": 0,
+  "co_lower": 20.0,
+  "mis_multiplier": 5.0,
+  "tradingsymbol": "HDFCBANK",
+  "co_upper": 5.0,
+  "nrml_margin": 0,
+  "mis_margin": 20.0
+ },
+ {
+  "margin": 0,
+  "co_lower": 20.0,
+  "mis_multiplier": 5.0,
+  "tradingsymbol": "INFY",
+  "co_upper": 5.0,
+  "nrml_margin": 0,
+  "mis_margin": 20.0
+ },
+ {
+  "margin": 0,
+  "co_lower": 20.0,
+  "mis_multiplier": 5.0,
+  "tradingsymbol": "M&M",
+  "co_upper": 5.0,
+  "nrml_margin": 0,
+  "mis_margin": 20.0
+ },
+ {
+  "margin": 0,
+  "co_lower": 20.0,
+  "mis_multiplier": 5.0,
+  "tradingsymbol": "RELIANCE",
+  "co_upper": 5.0,
+  "nrml_margin": 0,
+  "mis_margin": 20.0
+ },
+ {
+  "margin": 0,
+  "co_lower": 20.0,
+  "mis_multiplier": 5.0,
+  "tradingsymbol": "SBIN",
+  "co_upper": 5.0,
+  "nrml_margin": 0,
+  "mis_margin": 20.0
+ },
+ {
+  "margin": 0,
+  "co_lower": 20.0,
+  "mis_multiplier": 5.0,
+  "tradingsymbol": "TCS",
+  "co_upper": 5.0,
+  "nrml_margin": 0,
+  "mis_margin": 20.0
+ }
+]

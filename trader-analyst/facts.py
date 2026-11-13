@@ -96,6 +96,10 @@ def parse_results(text, sym):
                     "filed": r.get("re_create_dt"), "audited": r.get("re_res_type")})
     if not out:
         raise FactsError("no quarterly results for %s in NSE's answer (wrong symbol, or a new listing)" % sym)
+    if all(q["revenue"] is None for q in out) or bank:       # banks file no "net sale" line
+        bank = True
+        for q in out:
+            q["revenue"] = None
     seen = {}
     for q in out:                      # the same quarter can be listed twice: keep the first
         seen.setdefault(q["end"], q)

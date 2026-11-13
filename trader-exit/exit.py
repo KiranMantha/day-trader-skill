@@ -271,7 +271,7 @@ def compute(entry, stop_rule, stop_param, target_rule, target_param, or_high=Non
     """The stop, the target and the risk, in exact cents. Raises PlanError with the reason."""
     e = cents(entry)
     if e <= 0:
-        raise PlanError("the entry price must be above $0")
+        raise PlanError("the entry price must be above ₹0")
     detail = ""
     if stop_rule in ("or_mid", "or_low"):
         if or_high is None or or_low is None:
@@ -308,7 +308,7 @@ def compute(entry, stop_rule, stop_param, target_rule, target_param, or_high=Non
         raise PlanError("the stop %s (%s) is at or above the entry %s: a long's stop goes under the entry"
                         % (money(stop), label, money(e)))
     if stop <= 0:
-        raise PlanError("the stop works out to %s: pick a stop above $0" % money(stop))
+        raise PlanError("the stop works out to %s: pick a stop above ₹0" % money(stop))
     risk = e - stop
     floor_risk = e * MIN_RISK_PCT / 100
     if risk < floor_risk:
