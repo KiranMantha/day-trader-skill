@@ -469,6 +469,7 @@ def order_ticket(s):
            % (setup, s["symbol"], s["qty"], "shares" if s["segment"] == "equity" else "units", names[s["bound_by"]],
               s["qty"], _price(s["risk_per_share"]), money(s["max_loss"])))
     o.update({
+        "margin_required": round(s["margin_used"], 2),
         "stop_loss_trigger": _price(s["stop"]),
         "target_price": _price(s["target"]),
         "segment": s["segment"], "lot_size": s["lot_size"], "tick": s["tick"],
