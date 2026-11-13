@@ -7,17 +7,17 @@ session in the data.
 
     python3 timemachine.py run                          # trader/plan.json, 10,000 replays, seed 19
     python3 timemachine.py run --write                  # also save trader/timemachine.json
-    python3 timemachine.py run --until 15:55            # stop each replay at your flat-by time
+    python3 timemachine.py run --until 15:15            # stop each replay at your flat-by time
     python3 timemachine.py run --seed 7 --replays 20000 --json
-    python3 timemachine.py run --symbol TSLA --date 2026-10-19 --entry 364.18 \\
-        --stop 358.32 --target 370.04 --entry-time "10:15 AM"
+    python3 timemachine.py run --symbol RELIANCE --date 2026-11-13 --entry 1334.00 \\
+        --stop 1328.80 --target 1344.40 --entry-time "10:05 AM"
     python3 timemachine.py chart                        # ASCII fan chart of the replays
     python3 timemachine.py chart --from trader/timemachine.json
 
 How the replays work (the reel's sim.py, same algorithm, same random draws):
   1. Fetch 60 days of 5-minute bars (Yahoo v8 chart, range=60d interval=5m;
-     one request). Keep only FULL sessions before the plan's date: 78 bars,
-     9:30 to 4:00 IST. Half days, gaps and today are left out.
+     one request). Keep only FULL sessions before the plan's date: 75 bars,
+     9:15 to 3:30 PM IST. Half days, gaps and today are left out.
   2. The pool: for every bar slot 1..77 of the day, each past session's bar as
      ratios to the previous bar's close: (open, high, low, close) / prev close.
   3. One replay starts at the entry price and walks the rest of the session.
@@ -26,8 +26,7 @@ How the replays work (the reel's sim.py, same algorithm, same random draws):
      the current price. The stop is checked before the target in every bar,
      so a bar that touches both counts as the stop (the conservative call).
   4. Outcomes: "target" or "stop" (whichever was touched first), or "neither"
-     when the trade is still open at --until (default 16:00, the close, or
-     13:00 on an NSE early-close day).
+     when the trade is still open at --until (default 15:30, the close).
      "green" = target first, or above the entry at --until (below for a sell).
      R = the target's R at the target, -1 at the stop, otherwise
      (price at --until - entry) / risk. A gap through the stop still counts
@@ -83,9 +82,9 @@ PAUSE = 0.5          # seconds between requests: be polite to free endpoints
 BACKOFF = 5.0        # seconds to wait once after a 429
 HOSTS = ("query2", "query1")
 INTERVAL = 300       # 5-minute bars, in seconds
-SESSION_BARS = 78    # 9:30 to 16:00 in 5-minute bars
-OPEN_MIN = 9 * 60 + 30
-CLOSE_MIN = 16 * 60
+SESSION_BARS = 75    # 9:15 to 15:30 in 5-minute bars
+OPEN_MIN = 9 * 60 + 15
+CLOSE_MIN = 15 * 60 + 30
 MIN_SESSIONS = 20
 SAMPLE_PATHS = 160
 BAND_PATHS = 2000
@@ -300,13 +299,21 @@ def split_sessions(bars):
 
 
 def full_sessions(days, before):
-    """Full sessions (all 78 bars) strictly before the plan's date, oldest first,
+    """Full sessions (all 75 bars) strictly before the plan's date, oldest first,
     and the short ones that were left out (half days, gaps)."""
     full, short = [], []
     for d in sorted(days):
         if d >= before:
             continue
-        s = days[d]
+        s = dict(days[d])
+        # NSE stocks often print no trade in a 5-minute slot and Yahoo then sends a null bar. Up to 3 such
+        # slots are filled with a flat no-volume bar at the last close (that is what a no-trade slot is);
+        # a session missing more, or its opening slot, is left out.
+        if 0 in s and SESSION_BARS - 3 <= len(s) < SESSION_BARS:
+            for i in range(1, SESSION_BARS):
+                if i not in s:
+                    p = s[i - 1]["c"]
+                    s[i] = {"date": d, "slot": i, "start": clock24(OPEN_MIN + 5 * i), "o": p, "h": p, "l": p, "c": p, "v": 0}
         if len(s) == SESSION_BARS:
             full.append((d, [s[i] for i in range(SESSION_BARS)]))
         else:
@@ -515,7 +522,7 @@ def load_plan(a, now_utc):
 def normalize_plan(raw, src="flags"):
     """A plan dict (trader/plan.json shape) -> the checked plan the time machine runs."""
     sym = str(raw.get("symbol") or "").strip().upper()
-    if not re.match(r"^[A-Z][A-Z0-9.\-]{0,9}$", sym):
+    if not re.match(r"^[A-Z0-9][A-Z0-9&.\-]{0,19}$", sym):
         raise TMError("the plan needs a ticker symbol, got %r" % raw.get("symbol"))
     side = str(raw.get("side") or "buy").lower()
     if side not in ("buy", "sell"):
@@ -561,7 +568,7 @@ def normalize_plan(raw, src="flags"):
         or_min = int(or_min)
     except (TypeError, ValueError):
         raise TMError("opening_range.minutes must be a number")
-    if or_min < 5 or or_min % 5 or or_min >= 390:
+    if or_min < 5 or or_min % 5 or or_min >= SESSION_BARS * 5:
         raise TMError("opening_range.minutes must be a multiple of 5 (got %s)" % or_min)
     risk = (entry - stop) if long else (stop - entry)
     return {
@@ -608,7 +615,7 @@ def resolve_rule(plan, entry_day):
 # ---------------------------------------------------------------- the run
 
 def _until12(mc):
-    t = mc.get("until") or "16:00"
+    t = mc.get("until") or "15:30"
     return clock12(int(t[:2]) * 60 + int(t[3:]))
 
 
@@ -670,7 +677,7 @@ def time_machine(text, plan, now_utc, replays=10000, seed=19, window=2, until=No
     result = chart_result(text, sym)
     meta, bars, dropped = parse_bars(result, now_utc)
     msym = str(meta.get("symbol") or "").upper()
-    if msym and msym != sym.replace(".", "-"):
+    if msym and msym != yahoo_symbol(sym):
         raise TMError("the data is for %s but the plan is for %s" % (msym, sym))
     gran = meta.get("dataGranularity")
     if gran and gran != "5m":
@@ -912,7 +919,7 @@ def main(argv=None):
         p.add_argument("--replays", type=int, default=10000)
         p.add_argument("--seed", type=int, default=19)
         p.add_argument("--window", type=int, default=2, help="draw from the same time of day +- this many bars")
-        p.add_argument("--until", help="end each replay at this time (default 16:00, the close)")
+        p.add_argument("--until", help="end each replay at this time (default 15:30, the close)")
         p.add_argument("--offline", metavar="FILE", help="a saved Yahoo chart JSON (.json or .json.gz), no network")
         p.add_argument("--now", help='pretend it is this time ("2026-10-19 10:15" IST, or ISO with Z)')
 
