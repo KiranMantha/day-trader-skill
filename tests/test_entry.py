@@ -416,7 +416,7 @@ class Watch(unittest.TestCase):
         self.assertEqual(fired[0][0]["trigger"]["time"], "10:15 AM")
         self.assertEqual(fired[0][0]["trigger"]["price"], 364.18)
         # it looked at 10:07 (10:05 bar spiking to 363 in progress) and at 10:10:02 (that bar closed 361.68)
-        self.assertEqual([entry.to_eastern(c).strftime("%H:%M:%S") for c in calls], ["10:07:00", "10:10:02", "10:15:02"])
+        self.assertEqual([entry.to_ist(c).strftime("%H:%M:%S") for c in calls], ["10:07:00", "10:10:02", "10:15:02"])
         text = "\n".join(lines)
         self.assertIn("10:05 bar  closed $361.68  $0.50 under $362.18", text)
         self.assertIn("10:10 bar  closed $364.18  TRIGGERED", text)
@@ -428,7 +428,7 @@ class Watch(unittest.TestCase):
         code, res, lines, fired, clock = self.loop(live_provider(doc(), lag_until=lag, calls=calls),
                                                    "2026-10-19 10:12", every=30)
         self.assertEqual(code, 0)
-        times = [entry.to_eastern(c).strftime("%H:%M:%S") for c in calls]
+        times = [entry.to_ist(c).strftime("%H:%M:%S") for c in calls]
         self.assertEqual(times, ["10:12:00", "10:15:02", "10:15:32"])   # 10:15:02: Yahoo still at 10:14:32
         self.assertEqual(fired[0][0]["trigger"]["time"], "10:15 AM")
 
@@ -454,7 +454,7 @@ class Watch(unittest.TestCase):
         code, res = entry.watch_loop(live_provider(doc(), calls=calls), clock.now, clock.sleep, lines.append,
                                      dict(self.OPTS), every=30)
         self.assertEqual(code, 0)
-        times = [entry.to_eastern(c).strftime("%H:%M:%S") for c in calls]
+        times = [entry.to_ist(c).strftime("%H:%M:%S") for c in calls]
         self.assertEqual(times[:2], ["09:46:00", "10:04:30"])   # straight after waking, not a long sleep later
         text = "\n".join(lines)
         for start in (" 9:45", " 9:50", " 9:55", "10:00"):
@@ -466,7 +466,7 @@ class Watch(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertEqual(res["status"], "expired")
         self.assertEqual(fired, [])
-        self.assertEqual(entry.to_eastern(clock.now()).strftime("%H:%M"), "15:30")
+        self.assertEqual(entry.to_ist(clock.now()).strftime("%H:%M"), "15:30")
         until = DT(2026, 10, 19, 11, 0)
         code, res, lines, fired, clock = self.loop(live_provider(no_breakout()), "2026-10-19 10:30", every=300,
                                                    until=until)

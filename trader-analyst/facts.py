@@ -301,7 +301,7 @@ def changes(result):
     out = []
 
     def money(v):
-        return "n/a" if v is None else "$%.2fB" % (v / 1e9) if abs(v) >= 1e9 else "$%.1fM" % (v / 1e6)
+        return "n/a" if v is None else "₹%.2fB" % (v / 1e9) if abs(v) >= 1e9 else "₹%.1fM" % (v / 1e6)
 
     label = "Quarter ending %s%s" % (cur["end"], " (derived from the 10-K)" if cur["derived"] else "")
     line = "%s: revenue %s" % (label, money(cur["revenue"]))
@@ -311,7 +311,7 @@ def changes(result):
     if cur["net_income_yoy"] is not None:
         line += " (%+.1f%%)" % cur["net_income_yoy"]
     if cur["eps_diluted"] is not None:
-        line += ", diluted EPS $%.2f" % cur["eps_diluted"]
+        line += ", diluted EPS ₹%.2f" % cur["eps_diluted"]
         if cur["eps_yoy"] is not None:
             line += " (%+.1f%%)" % cur["eps_yoy"]
     out.append(line + ".")
@@ -415,7 +415,7 @@ def render(ticker, result, filings):
         out.append("Last 4 quarters: revenue %s, net income %s, diluted EPS %s." % (
             "$" + _m(t.get("revenue")) + "M" if t.get("revenue") is not None else "-",
             "$" + _m(t.get("net_income")) + "M" if t.get("net_income") is not None else "-",
-            "$%.2f" % t["eps_diluted"] if t.get("eps_diluted") is not None else "-"))
+            "₹%.2f" % t["eps_diluted"] if t.get("eps_diluted") is not None else "-"))
     out.append("")
     out.append("What changed:")
     for line in changes(result):

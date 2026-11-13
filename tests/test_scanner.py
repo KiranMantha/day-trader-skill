@@ -32,7 +32,7 @@ def run(argv):
 
 def ts(et_text):
     """New York wall-clock text -> unix seconds (through the tool's own DST rule)."""
-    utc = scan.eastern_to_utc(DT.strptime(et_text, "%Y-%m-%d %H:%M:%S" if et_text.count(":") == 2
+    utc = scan.ist_to_utc(DT.strptime(et_text, "%Y-%m-%d %H:%M:%S" if et_text.count(":") == 2
                                           else "%Y-%m-%d %H:%M"))
     return int((utc - DT(1970, 1, 1)).total_seconds())
 
@@ -118,8 +118,8 @@ class Time(unittest.TestCase):
         self.assertEqual(scan.eastern_offset(DT(2026, 3, 8, 7, 0)), -4)
         self.assertEqual(scan.eastern_offset(DT(2026, 11, 1, 5, 59)), -4)
         self.assertEqual(scan.eastern_offset(DT(2026, 11, 1, 6, 0)), -5)
-        self.assertEqual(scan.ts_to_eastern(1792416600), DT(2026, 10, 19, 9, 30))   # TSLA's first bar
-        self.assertEqual(scan.ts_to_eastern(ts("2026-12-01 09:30")), DT(2026, 12, 1, 9, 30))
+        self.assertEqual(scan.ts_to_ist(1792416600), DT(2026, 10, 19, 9, 30))   # TSLA's first bar
+        self.assertEqual(scan.ts_to_ist(ts("2026-12-01 09:30")), DT(2026, 12, 1, 9, 30))
         self.assertEqual(scan.parse_now("2026-10-19 10:15"), DT(2026, 10, 19, 14, 15))
         self.assertEqual(scan.parse_now("2026-12-01 10:15"), DT(2026, 12, 1, 15, 15))
         self.assertEqual(scan.parse_now("2026-10-19T14:15:00Z"), DT(2026, 10, 19, 14, 15))
@@ -347,7 +347,7 @@ class Orb(unittest.TestCase):
 
     def test_the_live_tick_is_dropped(self):
         s = self.data["TSLA"]
-        self.assertEqual(scan.ts_to_eastern(s["t"][-1]), DT(2026, 10, 19, 10, 58, 7))   # off the grid
+        self.assertEqual(scan.ts_to_ist(s["t"][-1]), DT(2026, 10, 19, 10, 58, 7))   # off the grid
         bars = scan.session_bars(s, D(2026, 10, 19), DT(2026, 10, 19, 10, 59))
         self.assertEqual(len(bars), 17)                    # 9:30 to 10:50; 10:55 in progress, the tick dropped
         self.assertTrue(scan.usable(bars, D(2026, 10, 19), DT(2026, 10, 19, 10, 59), 3))
@@ -395,7 +395,7 @@ class Orb(unittest.TestCase):
         self.assertEqual(hits[0]["at"], "10:05 AM")         # range 9:30 to 10:00 (high 101.4), 10:00 bar 101.5
         self.assertEqual(hits[0]["or_high"], 101.4)
         bars = scan.session_bars(s, D(2026, 11, 27), DT(2026, 11, 27, 12, 59))
-        self.assertEqual(scan.ts_to_eastern(s["t"][0]), DT(2026, 11, 27, 9, 30))
+        self.assertEqual(scan.ts_to_ist(s["t"][0]), DT(2026, 11, 27, 9, 30))
         self.assertEqual(len(bars), 41)                    # 9:30 to 12:50 done at 12:59; bars after 1:00 dropped
         with self.assertRaises(scan.ScanError) as cm:
             scan.orb_window(scan.parse_now("2026-11-27 13:10"), None, 15, datetime.time(15, 30))
@@ -440,7 +440,7 @@ class LiveFiveMinute(unittest.TestCase):
         self.assertIn("BRK.B", self.spark)
         t = self.spark["TSLA"]
         self.assertEqual(len(t["t"]), 8)                   # 9:30 ... 10:00 (in progress) + the 10:01:47 tick
-        self.assertEqual(scan.ts_to_eastern(t["t"][-1]), DT(2026, 10, 20, 10, 1, 47))
+        self.assertEqual(scan.ts_to_ist(t["t"][-1]), DT(2026, 10, 20, 10, 1, 47))
         day, cut = scan.orb_window(self.now, None, 15, datetime.time(15, 30))
         self.assertEqual(cut, DT(2026, 10, 20, 10, 1))
         bars = scan.session_bars(t, day, cut)

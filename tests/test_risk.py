@@ -247,7 +247,7 @@ class DayTradeChecks(unittest.TestCase):
             self.one(tsla(), no_entries_before="9.45am")
 
     def test_the_window_uses_new_york_time_not_the_machine(self):
-        self.assertEqual(check.to_eastern(at("2026-10-19 10:15")), datetime.datetime(2026, 10, 19, 10, 15))
+        self.assertEqual(check.to_ist(at("2026-10-19 10:15")), datetime.datetime(2026, 10, 19, 10, 15))
         self.assertEqual(at("2026-10-19 10:15"), datetime.datetime(2026, 10, 19, 14, 15))
         self.assertEqual(at("2026-12-01 10:15"), datetime.datetime(2026, 12, 1, 15, 15))
 

@@ -169,7 +169,7 @@ class Check(unittest.TestCase):
         m = news.parse_chart(raw("chart-TSLA.json"), "TSLA")
         self.assertEqual(m["prev_close"], 354.72)
         self.assertEqual(m["pct"], 3.31)
-        self.assertEqual(news.to_eastern(m["time"]).strftime("%H:%M"), "10:52")
+        self.assertEqual(news.to_ist(m["time"]).strftime("%H:%M"), "10:52")
         quiet = dict(m, pct=1.2)
         self.assertNotIn("MOVING", news.render_moves([quiet])[0])
         self.assertIn("MOVING", news.render_moves([quiet], move_pct=1.0)[0])
@@ -182,11 +182,11 @@ class Check(unittest.TestCase):
 
     def test_new_york_time_follows_daylight_saving(self):
         utc = datetime.datetime(2026, 1, 15, 15, 0, tzinfo=datetime.timezone.utc)
-        self.assertEqual(news.to_eastern(utc).hour, 10)  # EST, UTC-5
+        self.assertEqual(news.to_ist(utc).hour, 10)  # EST, UTC-5
         utc = datetime.datetime(2026, 10, 19, 14, 15, tzinfo=datetime.timezone.utc)
-        self.assertEqual(news.to_eastern(utc).hour, 10)  # EDT, UTC-4
+        self.assertEqual(news.to_ist(utc).hour, 10)  # EDT, UTC-4
         utc = datetime.datetime(2026, 11, 1, 6, 30)       # 1:30 EST, just after the switch back
-        self.assertEqual(news.to_eastern(utc).hour, 1)
+        self.assertEqual(news.to_ist(utc).hour, 1)
 
     def test_day_trading_tags(self):
         items = [{"id": "x", "source": "Yahoo Finance", "kind": "headline", "ticker": "TSLA",

@@ -70,7 +70,7 @@ def keep_bars(result, keep):
 
 
 def et(ts):
-    return tm.to_eastern(tm.utc_of(ts))
+    return tm.to_ist(tm.utc_of(ts))
 
 
 def run(argv):
@@ -288,7 +288,7 @@ class Bars(unittest.TestCase):
             for b in bars[:42] if day.isoformat() == "2026-11-27" else bars:
                 local = tm.datetime.datetime.combine(day, tm.datetime.time(9, 30)) + tm.datetime.timedelta(
                     minutes=5 * b["slot"])
-                stamps.append(int((tm.eastern_to_utc(local) - tm.EPOCH).total_seconds()))
+                stamps.append(int((tm.ist_to_utc(local) - tm.EPOCH).total_seconds()))
                 for k, f in (("open", "o"), ("high", "h"), ("low", "l"), ("close", "c"), ("volume", "v")):
                     cols[k].append(b[f])
         text = json.dumps({"chart": {"result": [{"meta": {"symbol": "TSLA"}, "timestamp": stamps,
