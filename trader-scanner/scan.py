@@ -1,34 +1,22 @@
 #!/usr/bin/env python3
 """Chart Scanner for trader-scanner: scan thousands of charts for setups. Standard library only.
 
-    python3 scan.py universe                          # Nasdaq Trader lists -> trader/universe.txt
+    python3 scan.py universe                          # NSE EQ stocks that Zerodha allows on MIS -> trader/universe.txt
     python3 scan.py daily                             # before the open: daily setups -> trader/watchlist.json
-    python3 scan.py daily --symbols TSLA,NVDA,AMD     # or --watchlist FILE, or --limit 200
-    python3 scan.py orb                               # after 9:50 AM ET: opening-range breakouts so far
-    python3 scan.py orb --at 10:15 --or-minutes 15    # cut the clock at 10:15 AM ET
-    python3 scan.py orb --offline wall5m.json.gz --now "2026-10-19 10:15" --min-price 0
+    python3 scan.py daily --symbols RELIANCE,INFY,SBIN     # or --watchlist FILE, or --limit 200
+    python3 scan.py orb                               # after 9:35 AM IST: opening-range breakouts so far
+    python3 scan.py orb --at 10:15 --or-minutes 15    # cut the clock at 10:15 AM IST
+    python3 scan.py orb --offline wall5m.json.gz --now "2026-11-13 10:15" --min-price 0
 
-universe  Downloads Nasdaq Trader's symbol directories (nasdaqlisted.txt and
-          otherlisted.txt) and keeps US-listed common stocks, ordinary shares
-          and ADRs. The rule, in order:
-            1. not a test issue, not an ETF, not NextShares
-            2. a plain ticker: 1 to 5 letters, or 1 to 4 letters plus one
-               class letter after a dot (BRK.B); a .U / .W / .R suffix
-               (units, warrants, rights) is out, and so is a $ preferred
-            3. out, whatever else the name says: warrants; SPAC units and
-               rights ("Units, each consisting of", "Rights to receive");
-               notes, ETNs, debentures; a % coupon; "Depositary Shares" that
-               are not American or Global (those carry a preferred)
-            4. in: the name calls it common stock / shares / units, ordinary
-               shares, shares of beneficial interest, ADS / ADR / American or
-               Global depositary shares, or partnership / trust units
-            5. out: the name still says unit, right, bond, preferred or preference
-            6. in: everything else (plain names like "AMETEK, Inc.")
+universe  Downloads NSE's EQUITY_L.csv and Zerodha's public MIS margin list
+          (https://api.kite.trade/margins/equity) and keeps the stocks you
+          can trade intraday: series EQ (BE/BZ are trade-for-trade, SM/ST are
+          SME) with a plain symbol (M&M, BAJAJ-AUTO) and a mis_margin above 0.
 
 daily     Pre-market scan of daily CLOSES (Yahoo spark: 20 symbols a request,
           3 months of 1-day bars, closes only). Liquidity from the spark meta:
-          regularMarketPrice >= --min-price (5) and regularMarketVolume >=
-          --min-volume (1,000,000). Setups, from closes only:
+          regularMarketPrice >= --min-price (50 rupees) and regularMarketVolume >=
+          --min-volume (500,000 shares). Setups, from closes only:
             breakout_20d     the last close is above every close of the 20 before it
             bull_flag        up more than 10 % over the 10 sessions before the
                              last 5, then the last 5 closes inside a 5 % range
@@ -47,12 +35,12 @@ orb       Opening-range breakouts, 5-minute bars. The range is the first
           bar's close time. Stage 2 fetches at most --max-confirm (200) charts,
           the most traded candidates first (price x volume so far), and says
           so when it stops short. A chart is usable only when every 5-minute
-          bar from 9:30 to the cutoff is there (a missing bar is a halt or no
-          trades). Floors: --min-price 5 (last close), --min-volume 0.
+          bar from 9:15 to the cutoff is there (a missing bar is a halt or no
+          trades). Floors: --min-price 50 (last close, rupees), --min-volume 0.
 
 Bars: null closes are dropped, a bar off the 5-minute grid (the live tick,
 like 10:49:45) is dropped, and a bar counts only once it is complete
-(start + 5 minutes <= the clock). Times are IST (ET). --now pins the
+(start + 5 minutes <= the clock). Times are IST. --now pins the
 clock ("2026-10-19 10:15", IST; ...Z for UTC).
 
 Yahoo's endpoints are free, unofficial and can lag. query2 first, query1 on
@@ -60,7 +48,7 @@ a 429 or 5xx, one retry after a pause on a 429. A polite pause between
 requests (--pause). Partial results are reported as partial.
 
 --offline PATH reads files instead of the network: universe wants a folder
-with nasdaqlisted.txt and otherlisted.txt; daily and orb take a folder of
+with EQUITY_L.csv and margins-equity.json; daily and orb take a folder of
 <T>.json v8 chart files or spark responses, or one file that is a spark
 response, a v8 chart, or a bundle {"TSLA": <v8 json>, ...}. .json.gz is fine.
 
@@ -82,8 +70,8 @@ import urllib.request
 
 UA = "Mozilla/5.0 (compatible; day-trader-skill/2.0; +https://github.com/Jakeschincariol/day-trader-skill)"
 YAHOO_HOSTS = ("https://query2.finance.yahoo.com", "https://query1.finance.yahoo.com")
-NASDAQ_FILES = ("nasdaqlisted.txt", "otherlisted.txt")
-NASDAQ_URL = "https://www.nasdaqtrader.com/dynamic/SymDir/"
+EQUITY_URL = "https://archives.nseindia.com/content/equities/EQUITY_L.csv"
+MARGINS_URL = "https://api.kite.trade/margins/equity"
 SPARK_MAX = 20      # Yahoo's spark answers 400 above 20 symbols
 PAUSE = 0.3         # seconds between requests: be polite to free endpoints
 BACKOFF = 5.0       # seconds to wait before the one retry after a 429
@@ -378,87 +366,62 @@ def load_offline(path):
 
 # ---------------------------------------------------------------- universe
 
-TICKER = re.compile(r"^[A-Z]{1,5}$|^[A-Z]{1,4}\.[A-Z]$")
-ALWAYS_OUT = [
-    ("warrant", re.compile(r"\bwarrants?\b")),
-    ("unit or right", re.compile(r"\b(units?|rights?),? (each|that|entitling)\b|(?<!the )\brights? to\b")),
-    ("note", re.compile(r"\b(notes?|etns?|debentures?)\b")),
-    ("coupon", re.compile(r"%")),
-    ("depositary", re.compile(r"(?<!american )(?<!global )\bdepositary shares?\b")),
-]
-COMMON = re.compile(
-    r"\bcommon (stock|shares?|units?)\b|\bord(inary)? shares?\b|\bshares? of beneficial interest\b"
-    r"|\b(american|global) deposit[ao]ry\b|\bads[s]?\b|\badrs?\b"
-    r"|\b(limited partnership|partnership|trust) units?\b|\bl\.?p\.? units?\b"
-    r"|\bunits? (of|representing)\b.*\b(limited partner|partnership|beneficial interest|limited liability)")
-SOFT_OUT = [
-    ("unit", re.compile(r"\bunits?\b")),
-    ("right", re.compile(r"\brights?\b")),
-    ("bond", re.compile(r"\bbonds?\b")),
-    ("preferred", re.compile(r"\bpreferred\b|\bpreference\b")),
-]
+TICKER = re.compile(r"^[A-Z0-9][A-Z0-9&\-]{0,19}$")   # M&M, BAJAJ-AUTO, 360ONE
+UNIVERSE_FILES = ("EQUITY_L.csv", "margins-equity.json")
 
 
-def classify(row):
-    """One symbol-directory row -> 'keep' or the rule that drops it."""
-    sym = (row.get("Symbol") or row.get("ACT Symbol") or "").strip()
-    if (row.get("Test Issue") or "").strip() != "N":
-        return "test issue"
-    if (row.get("ETF") or "").strip() != "N":
-        return "ETF"
-    if (row.get("NextShares") or "N").strip() != "N":
-        return "NextShares"
+def classify(row, mis):
+    """One EQUITY_L.csv row -> 'keep' or the rule that drops it. mis = {SYMBOL: mis_margin percent}."""
+    sym = (row.get("SYMBOL") or "").strip()
+    if (row.get("SERIES") or "").strip() != "EQ":
+        return "not EQ series"   # BE/BZ are trade-for-trade (no intraday), SM/ST are SME
     if not TICKER.match(sym):
         return "not a plain ticker"
-    if re.search(r"\.[UWR]$", sym):
-        return "unit / warrant / right suffix"
-    name = " ".join((row.get("Security Name") or "").lower().split())
-    for tag, rx in ALWAYS_OUT:
-        if rx.search(name):
-            return tag
-    if COMMON.search(name):
-        return "keep"
-    for tag, rx in SOFT_OUT:
-        if rx.search(name):
-            return tag
+    if sym not in mis:
+        return "no MIS at Zerodha"
     return "keep"
 
 
-def parse_symdir(text):
-    """Nasdaq Trader pipe file -> (rows, file_created). The last line is 'File Creation Time: ...'."""
+def parse_equity_l(text):
+    """NSE's EQUITY_L.csv -> rows (header names stripped)."""
     lines = [ln for ln in text.replace("\r", "").split("\n") if ln.strip()]
-    if not lines or "|" not in lines[0]:
-        raise ScanError("not a Nasdaq Trader symbol directory")
-    hdr = [h.strip() for h in lines[0].split("|")]
-    if "Security Name" not in hdr or not ({"Symbol", "ACT Symbol"} & set(hdr)):
-        raise ScanError("not a Nasdaq Trader symbol directory (header %s)" % lines[0][:60])
-    rows, created = [], None
-    for ln in lines[1:]:
-        if ln.startswith("File Creation Time"):
-            m = re.search(r"(\d{2})(\d{2})(\d{4})(\d{2}):(\d{2})", ln)
-            if m:
-                created = "%s-%s-%s %s:%s" % (m.group(3), m.group(1), m.group(2), m.group(4), m.group(5))
+    if not lines or "SYMBOL" not in lines[0].upper():
+        raise ScanError("not NSE's EQUITY_L.csv")
+    hdr = [h.strip().upper() for h in lines[0].split(",")]
+    if "SYMBOL" not in hdr or "SERIES" not in hdr:
+        raise ScanError("not NSE's EQUITY_L.csv (header %s)" % lines[0][:60])
+    return [dict(zip(hdr, (c.strip() for c in ln.split(",")))) for ln in lines[1:]]
+
+
+def parse_mis(text):
+    """api.kite.trade/margins/equity JSON -> {SYMBOL: mis_margin percent} for symbols Zerodha allows on MIS."""
+    try:
+        rows = json.loads(text)
+    except ValueError as e:
+        raise ScanError("Zerodha's margin list is not JSON: %s" % e)
+    out = {}
+    for r in rows if isinstance(rows, list) else []:
+        try:
+            if float(r.get("mis_margin") or 0) > 0:
+                out[str(r["tradingsymbol"]).upper()] = float(r["mis_margin"])
+        except (TypeError, ValueError, KeyError, AttributeError):
             continue
-        rows.append(dict(zip(hdr, ln.split("|"))))
-    return rows, created
+    return out
 
 
 def build_universe(texts):
-    """{filename: text} -> (kept [(SYM, name)], counts, created)."""
-    kept, counts, created = {}, {}, None
-    for fname in NASDAQ_FILES:
+    """{filename: text} -> (kept [(SYM, name)], counts). NSE EQ-series stocks Zerodha lets you trade on MIS."""
+    for fname in UNIVERSE_FILES:
         if fname not in texts:
             raise ScanError("missing %s" % fname)
-        rows, c = parse_symdir(texts[fname])
-        created = created or c
-        counts["rows"] = counts.get("rows", 0) + len(rows)
-        for r in rows:
-            why = classify(r)
-            counts[why] = counts.get(why, 0) + 1
-            if why == "keep":
-                sym = (r.get("Symbol") or r.get("ACT Symbol")).strip()
-                kept[sym] = " ".join((r.get("Security Name") or "").split())
-    return sorted(kept.items()), counts, created
+    rows, mis = parse_equity_l(texts["EQUITY_L.csv"]), parse_mis(texts["margins-equity.json"])
+    kept, counts = {}, {"rows": len(rows)}
+    for r in rows:
+        why = classify(r, mis)
+        counts[why] = counts.get(why, 0) + 1
+        if why == "keep":
+            kept[r["SYMBOL"]] = " ".join((r.get("NAME OF COMPANY") or "").split())
+    return sorted(kept.items()), counts
 
 
 # ---------------------------------------------------------------- daily setups
@@ -626,7 +589,7 @@ def orb_hit(bars, n_range):
 
 
 def orb_window(now_utc, at, or_minutes, until, explicit_day=None):
-    """-> (day, cutoff naive ET) or raise ScanError with the plain message."""
+    """-> (day, cutoff naive IST) or raise ScanError with the plain message."""
     now = to_ist(now_utc)
     day = explicit_day or now.date()
     if or_minutes < BAR_MIN or or_minutes % BAR_MIN or or_minutes > 120:
@@ -642,22 +605,22 @@ def orb_window(now_utc, at, or_minutes, until, explicit_day=None):
     if at is not None:
         cutoff = datetime.datetime.combine(day, at)
         if explicit_day is None and cutoff > now + datetime.timedelta(seconds=59):
-            raise ScanError("--at %s is later than now (%s ET)." % (at.strftime("%H:%M"), clock_label(now)))
+            raise ScanError("--at %s is later than now (%s IST)." % (at.strftime("%H:%M"), clock_label(now)))
         if cutoff > close_dt:
             raise ScanError("--at %s is after the %s close on %s." % (at.strftime("%H:%M"), clock_label(close_dt),
                                                                        day_label(day)))
     else:
         cutoff = now.replace(second=0, microsecond=0)
         if cutoff >= close_dt:
-            raise ScanError("The market closed at %s ET on %s. Replay the session with --at 10:15."
+            raise ScanError("The market closed at %s IST on %s. Replay the session with --at 10:15."
                             % (clock_label(close_dt), day_label(day)))
     if cutoff < first_close:
-        raise ScanError("It is %s ET: the %d-minute opening range runs 9:30 to %s and the first bar after it "
+        raise ScanError("It is %s IST: the %d-minute opening range runs 9:15 to %s and the first bar after it "
                         "closes at %s. Run orb again after %s."
                         % (clock_label(cutoff), or_minutes, clock_label(range_end), clock_label(first_close),
                            clock_label(first_close)))
     if until is not None and cutoff.time() > until:
-        raise ScanError("It is %s ET, after %s, your last time for new entries (no_entries_after): an "
+        raise ScanError("It is %s IST, after %s, your last time for new entries (no_entries_after): an "
                         "opening-range breakout found now is expired. Run orb tomorrow after %s, or replay "
                         "today with --at 10:15." % (clock_label(cutoff), until.strftime("%H:%M"),
                                                       clock_label(first_close)))
@@ -821,7 +784,7 @@ def money(x):
 def cmd_universe(a):
     t0 = time.time()
     texts = {}
-    for k, fname in enumerate(NASDAQ_FILES):
+    for k, fname in enumerate(UNIVERSE_FILES):
         if a.offline:
             p = os.path.join(a.offline, fname)
             if not os.path.exists(p):
@@ -831,13 +794,14 @@ def cmd_universe(a):
         else:
             if k and a.pause:
                 SLEEP(a.pause)
+            url = EQUITY_URL if fname.endswith(".csv") else MARGINS_URL
             try:
-                texts[fname] = http_get(NASDAQ_URL + fname, timeout=60)
+                texts[fname] = http_get(url, timeout=60)
             except urllib.error.HTTPError as e:
-                raise ScanError("nasdaqtrader.com answered HTTP %d for %s" % (e.code, fname))
+                raise ScanError("%s answered HTTP %d for %s" % (urllib.parse.urlparse(url).netloc, e.code, fname))
             except (urllib.error.URLError, OSError) as e:
-                raise ScanError("could not reach nasdaqtrader.com: %s" % getattr(e, "reason", e))
-    kept, counts, created = build_universe(texts)
+                raise ScanError("could not reach %s: %s" % (urllib.parse.urlparse(url).netloc, getattr(e, "reason", e)))
+    kept, counts = build_universe(texts)
     if not a.no_write:
         d = os.path.dirname(a.out)
         if d:
@@ -847,13 +811,12 @@ def cmd_universe(a):
                 fh.write("%s|%s\n" % (sym, name))
     dropped = {k: v for k, v in counts.items() if k not in ("keep", "rows")}
     if a.json:
-        print(json.dumps({"count": len(kept), "rows": counts.get("rows", 0), "files_created": created,
+        print(json.dumps({"count": len(kept), "rows": counts.get("rows", 0),
                           "dropped": dropped, "out": None if a.no_write else a.out,
                           "seconds": round(time.time() - t0, 1)}, indent=2))
     else:
-        print("Nasdaq Trader symbol directories%s: %s rows." % (
-            (", files of %s IST" % created) if created else "", "{:,}".format(counts.get("rows", 0))))
-        print("Kept %s US-listed common stocks, ordinary shares and ADRs." % "{:,}".format(len(kept)))
+        print("NSE EQUITY_L.csv and Zerodha's MIS list: %s rows." % "{:,}".format(counts.get("rows", 0)))
+        print("Kept %s NSE EQ-series stocks you can trade intraday on Zerodha (MIS)." % "{:,}".format(len(kept)))
         print("Dropped: " + ", ".join("%s %s" % ("{:,}".format(v), k)
                                       for k, v in sorted(dropped.items(), key=lambda kv: -kv[1])) + ".")
         if not a.no_write:
@@ -888,7 +851,7 @@ def cmd_daily(a):
         print(json.dumps(dict(doc, counts=counts, seconds=round(time.time() - t0, 1)), indent=2))
         return 0 if hits else 1
     local = to_ist(now)
-    print("Daily scan, %s ET, closes through %s (Yahoo spark, daily closes only)." % (
+    print("Daily scan, %s IST, closes through %s (Yahoo spark, daily closes only)." % (
         local.strftime("%a %Y-%m-%d %H:%M"), last_date.isoformat() if last_date else "nothing"))
     print("Fetched %s of %s charts%s. %s passed the liquidity filter (₹%s+ and %s+ shares)%s; "
           "%s scanned." % ("{:,}".format(counts["fetched"]), "{:,}".format(len(symbols)),
@@ -925,7 +888,7 @@ def cmd_orb(a):
     now = parse_now(a.now)
     at = parse_hhmm(a.at) if a.at else None
     cfg = read_config(a.config)
-    until = parse_hhmm(a.until or cfg.get("no_entries_after") or "15:30", "--until")
+    until = parse_hhmm(a.until or cfg.get("no_entries_after") or "15:00", "--until")
     data = failed = None
     explicit_day = None
     offline_syms = None
@@ -976,7 +939,7 @@ def cmd_orb(a):
     if a.json:
         print(json.dumps(dict(doc, counts=counts, seconds=round(time.time() - t0, 1)), indent=2))
         return 0 if hits else 1
-    print("Opening-range breakout scan, %s %s ET: %d-minute range (9:30 to %s), 5-minute bars, Yahoo."
+    print("Opening-range breakout scan, %s %s IST: %d-minute range (9:15 to %s), 5-minute bars, Yahoo."
           % (day_label(day), clock_label(cutoff), a.or_minutes, clock_label(slot(day, a.or_minutes // BAR_MIN))))
     print("Fetched %s of %s charts%s; %s usable%s; %s candidates, %s confirmed with real highs and lows."
           % ("{:,}".format(counts["fetched"]), "{:,}".format(len(symbols)),
@@ -1012,9 +975,9 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description="Chart Scanner (trader-scanner): daily setups and opening-range breakouts.")
     sub = ap.add_subparsers(dest="cmd")
 
-    p = sub.add_parser("universe", help="download Nasdaq Trader's lists -> trader/universe.txt")
+    p = sub.add_parser("universe", help="NSE EQ stocks with MIS at Zerodha -> trader/universe.txt")
     p.add_argument("--out", default=DEFAULT_UNIVERSE)
-    p.add_argument("--offline", metavar="DIR", help="a folder with nasdaqlisted.txt and otherlisted.txt")
+    p.add_argument("--offline", metavar="DIR", help="a folder with EQUITY_L.csv and margins-equity.json")
     p.add_argument("--no-write", action="store_true")
     p.add_argument("--pause", type=float, default=PAUSE)
     p.add_argument("--json", action="store_true")
@@ -1037,14 +1000,14 @@ def main(argv=None):
         p.add_argument("--json", action="store_true")
 
     p = sub.add_parser("daily", help="pre-market setups from daily closes")
-    common(p, 5.0, 1000000)
+    common(p, 50.0, 500000)
     p = sub.add_parser("orb", help="opening-range breakouts so far today")
-    common(p, 5.0, 0)
+    common(p, 50.0, 0)
     p.add_argument("--or-minutes", type=int, default=15)
     p.add_argument("--max-confirm", type=int, default=MAX_CONFIRM,
                    help="v8 charts to fetch in stage 2, most traded first (%d; 0 = all)" % MAX_CONFIRM)
     p.add_argument("--at", help="cut the clock at this IST, HH:MM")
-    p.add_argument("--until", help="no new entries after HH:MM (default: config no_entries_after, 15:30)")
+    p.add_argument("--until", help="no new entries after HH:MM (default: config no_entries_after, 15:00)")
     p.add_argument("--config", default="trader/config.json")
     a = ap.parse_args(argv)
     if not a.cmd:
